@@ -20,7 +20,7 @@ public:
     _theta = theta;
     _t = t;
     _i = i;
-    return _parseLogicalOr();
+    return _parseConditional();
   }
 
 private:
@@ -39,6 +39,27 @@ private:
 
   void _skipWhitespace() {
     while (isspace(_peek())) _pos++;
+  }
+
+  // 조건식: conditional → logicalOr ('?' conditional ':' conditional)?
+  // right-associative to support nested ternary expressions.
+  float _parseConditional() {
+    _skipWhitespace();
+    float cond = _parseLogicalOr();
+    _skipWhitespace();
+
+    if (_peek() == '?') {
+      _consume(); // '?'
+      float whenTrue = _parseConditional();
+      _skipWhitespace();
+      if (_peek() == ':') {
+        _consume(); // ':'
+      }
+      float whenFalse = _parseConditional();
+      return (cond != 0.0f) ? whenTrue : whenFalse;
+    }
+
+    return cond;
   }
 
   // 논리 OR: logicalOr → logicalAnd ('||' logicalAnd)*
@@ -190,7 +211,7 @@ private:
     // 괄호
     if (_peek() == '(') {
       _consume();
-      float result = _parseLogicalOr();
+      float result = _parseConditional();
       _skipWhitespace();
       if (_peek() == ')') _consume();
       return result;
@@ -235,13 +256,13 @@ private:
     // 함수 호출
     if (_peek() == '(') {
       _consume();
-      float arg1 = _parseLogicalOr();
+      float arg1 = _parseConditional();
       _skipWhitespace();
       
       // 2개 인자 함수
       if (_peek() == ',') {
         _consume();
-        float arg2 = _parseLogicalOr();
+        float arg2 = _parseConditional();
         _skipWhitespace();
         if (_peek() == ')') _consume();
         
